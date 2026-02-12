@@ -13,21 +13,28 @@
         <p>{{ error }}</p>
       </div>
       
+      <!-- 手机端模态背景 -->
+      <div
+        class="toolbox-modal-overlay"
+        v-show="!loading && !error && !toolboxCollapsed && isMobile"
+        @click="toolboxCollapsed = true"
+      ></div>
+
       <!-- 手机端浮动按钮 -->
-      <button 
-        class="toolbox-fab" 
-        v-show="!loading && !error && toolboxCollapsed"
+      <button
+        class="toolbox-fab"
+        v-show="!loading && !error && toolboxCollapsed && isMobile"
         @click="toolboxCollapsed = false"
       >
         🧰
       </button>
 
       <!-- 工具箱面板 -->
-      <div 
-        class="toolbox" 
-        :class="{ collapsed: toolboxCollapsed }" 
-        v-show="!loading && !error && !toolboxCollapsed" 
-        :style="{ left: toolboxPos.x + 'px', top: toolboxPos.y + 'px' }"
+      <div
+        class="toolbox"
+        :class="{ collapsed: toolboxCollapsed, mobile: isMobile }"
+        v-show="!loading && !error && !toolboxCollapsed"
+        :style="isMobile ? {} : { left: toolboxPos.x + 'px', top: toolboxPos.y + 'px' }"
       >
         <div class="toolbox-header" @mousedown="startDrag" style="cursor: grab;">
           <h3>图层控制</h3>
@@ -366,6 +373,7 @@ export default {
     const dragStart = ref({ x: 0, y: 0 });
     const currentBaseMap = ref('vec');
     const layerOpacity = ref(80);
+    const isMobile = ref(false); // 是否手机端
     
     // 绘制工具状态
     const currentDrawMode = ref(null);
@@ -396,6 +404,15 @@ export default {
     // 检查是否处于绘制模式
     const isDrawingMode = () => {
       return draw && draw.getMode && draw.getMode().startsWith('draw_');
+    };
+
+    // 手机端检测函数
+    const checkMobile = () => {
+      isMobile.value = window.innerWidth <= 768;
+      // 手机端默认折叠工具箱
+      if (isMobile.value) {
+        toolboxCollapsed.value = true;
+      }
     };
 
     // 保持当前绘制模式（防止被 MapboxDraw 自动切回 simple_select）
@@ -983,11 +1000,10 @@ export default {
     };
 
     onMounted(async () => {
-      // 手机端默认折叠工具箱
-      if (window.innerWidth <= 768) {
-        toolboxCollapsed.value = true;
-      }
-      
+      // 手机端检测
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+
       // 立即设置鼠标监听
       setupMouseListeners();
       
@@ -1437,7 +1453,8 @@ export default {
         map.remove();
       }
       removeMouseListeners();
-      
+      window.removeEventListener('resize', checkMobile);
+
       // 清理 Esc 键监听
       if (window.handleKeyDown) {
         window.removeEventListener('keydown', window.handleKeyDown);
@@ -1459,6 +1476,7 @@ export default {
       pointStyle,
       lineStyle,
       polygonStyle,
+      isMobile,
       toggleLayer,
       updateLayerOpacity,
       resetMap,
@@ -1869,19 +1887,6 @@ export default {
   transform: translateY(0);
 }
 
-@media (max-width: 768px) {
-  .toolbox {
-    top: 80px;
-    left: 10px;
-    right: 10px;
-    max-width: none;
-  }
-
-  .toolbox-content {
-    max-height: 300px;
-  }
-}
-
 /* 底图切换按钮样式 */
 .button-group {
   display: flex;
@@ -2041,28 +2046,52 @@ export default {
   cursor: pointer;
 }
 
+/* 手机端模态背景 */
+.toolbox-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 180;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* 手机端浮动按钮 */
 .toolbox-fab {
   display: none;
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4ECDC4, #38a169);
   color: white;
   border: none;
-  font-size: 24px;
+  font-size: 28px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   z-index: 250;
   transition: all 0.3s ease;
+  align-items: center;
+  justify-content: center;
 }
 
 .toolbox-fab:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .toolbox-fab:active {
@@ -2074,12 +2103,12 @@ export default {
   display: none;
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: 16px;
   color: #999;
   cursor: pointer;
   padding: 0;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   align-items: center;
   justify-content: center;
   transition: color 0.2s ease;
@@ -2091,46 +2120,67 @@ export default {
 
 /* 手机端适配 */
 @media (max-width: 768px) {
+  .toolbox-modal-overlay {
+    display: block;
+  }
+
   .toolbox-fab {
     display: flex;
-    align-items: center;
-    justify-content: center;
   }
-  
+
   .toolbox-close-btn {
     display: flex;
   }
-  
+
   .toolbox {
-    position: fixed;
+    position: fixed !important;
     top: auto !important;
-    left: 8px !important;
-    right: 8px;
-    bottom: 80px;
-    width: auto;
-    max-width: none;
-    max-height: 50vh;
-    border-radius: 12px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 80px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: 65vh !important;
+    border-radius: 16px !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25) !important;
+    z-index: 200 !important;
   }
-  
-  .toolbox .toolbox-content {
-    max-height: 40vh;
+
+  .toolbox.mobile .toolbox-content {
+    max-height: 55vh;
     overflow-y: auto;
+    padding-right: 8px;
   }
-  
+
+  .toolbox.mobile .toolbox-content::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .toolbox.mobile .toolbox-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .toolbox.mobile .toolbox-content::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+
+  .toolbox.mobile .toolbox-content::-webkit-scrollbar-thumb:hover {
+    background: #999;
+  }
+
   .map-legend {
     display: none;
   }
-  
+
   .map-header {
     top: 10px;
   }
-  
+
   .map-header h1 {
     font-size: 18px !important;
   }
-  
+
   .map-header p {
     font-size: 12px !important;
   }
