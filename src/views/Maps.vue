@@ -20,10 +20,11 @@
         @click="toolboxCollapsed = true"
       ></div>
 
-      <!-- 手机端浮动按钮 -->
+      <!-- 手机端浮动按钮 - 使用 v-if 保证在移动端始终存在 DOM -->
       <button
+        v-if="isMobile"
         class="toolbox-fab"
-        v-show="!loading && !error && toolboxCollapsed && isMobile"
+        :style="{ display: toolboxCollapsed ? 'flex !important' : 'none !important' }"
         @click="toolboxCollapsed = false"
       >
         🧰
@@ -33,7 +34,7 @@
       <div
         class="toolbox"
         :class="{ collapsed: toolboxCollapsed, mobile: isMobile }"
-        v-show="!loading && !error && !toolboxCollapsed"
+        v-show="!loading && !error && (!isMobile || !toolboxCollapsed)"
         :style="isMobile ? {} : { left: toolboxPos.x + 'px', top: toolboxPos.y + 'px' }"
       >
         <div class="toolbox-header" @mousedown="startDrag" style="cursor: grab;">
@@ -406,10 +407,31 @@ export default {
       return draw && draw.getMode && draw.getMode().startsWith('draw_');
     };
 
-    // 手机端检测函数
+    // 手机端检测函数 - 使用多种方法确保准确检测
     const checkMobile = () => {
-      isMobile.value = window.innerWidth <= 768;
-      // 手机端默认折叠工具箱
+      // 方法1: 检查User Agent
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isUserAgentMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+      
+      // 方法2: 检查触摸设备
+      const isTouchDevice = () => {
+        return (('ontouchstart' in window) ||
+                (navigator.maxTouchPoints > 0) ||
+                (navigator.msMaxTouchPoints > 0));
+      };
+      
+      // 方法3: 检查窗口宽度（降低阈值以涵盖更多设备）
+      const isWindowMobile = window.innerWidth <= 1024;
+      
+      // 综合判断：User Agent 识别为移动设备，或是触摸设备，或窗口宽度小于1024px
+      isMobile.value = isUserAgentMobile || (isTouchDevice() && isWindowMobile) || isWindowMobile;
+      
+      // 调试信息
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log(`📱 移动设备检测 - User Agent: ${isUserAgentMobile}, 触摸设备: ${isTouchDevice()}, 窗口宽: ${window.innerWidth}, 最终判定: ${isMobile.value}`);
+      }
+      
+      // 手机端默认折叠工具箱（但先显示FAB）
       if (isMobile.value) {
         toolboxCollapsed.value = true;
       }
@@ -1703,6 +1725,20 @@ export default {
   max-width: 280px;
 }
 
+/* 手机端工具箱样式 */
+.toolbox.mobile {
+  position: fixed !important;
+  top: auto !important;
+  left: 10px !important;
+  right: 10px !important;
+  bottom: 80px !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: 65vh !important;
+  border-radius: 16px !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
 .toolbox-header {
   display: flex;
   align-items: center;
@@ -2048,15 +2084,15 @@ export default {
 
 /* 手机端模态背景 */
 .toolbox-modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 180;
-  animation: fadeIn 0.3s ease;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  z-index: 180 !important;
+  animation: fadeIn 0.3s ease !important;
+  pointer-events: auto !important;
 }
 
 @keyframes fadeIn {
@@ -2070,23 +2106,23 @@ export default {
 
 /* 手机端浮动按钮 */
 .toolbox-fab {
-  display: none;
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4ECDC4, #38a169);
-  color: white;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  z-index: 250;
-  transition: all 0.3s ease;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #4ECDC4, #38a169) !important;
+  color: white !important;
+  border: none !important;
+  font-size: 28px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  z-index: 250 !important;
+  transition: all 0.3s ease !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .toolbox-fab:hover {
@@ -2100,7 +2136,6 @@ export default {
 
 /* 工具箱关闭按钮 */
 .toolbox-close-btn {
-  display: none;
   background: none;
   border: none;
   font-size: 16px;
@@ -2112,14 +2147,15 @@ export default {
   align-items: center;
   justify-content: center;
   transition: color 0.2s ease;
+  display: flex;
 }
 
 .toolbox-close-btn:hover {
   color: #f56c6c;
 }
 
-/* 手机端适配 */
-@media (max-width: 768px) {
+/* 手机端适配 - 更高的阈值以涵盖所有移动设备 */
+@media (max-width: 1024px) {
   .toolbox-modal-overlay {
     display: block;
   }

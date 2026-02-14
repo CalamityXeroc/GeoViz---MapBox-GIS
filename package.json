@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "backend": "node backend/src/server.js"
+    "backend": "cd backend && npm start"
   },
   "dependencies": {
     "@mapbox/mapbox-gl-draw": "^1.4.3",
