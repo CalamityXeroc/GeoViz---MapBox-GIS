@@ -4,7 +4,7 @@ package-lock.json
 yarn.lock
 dist/
 build/
-
+.agents
 # 环境变量（保护 API 密钥）
 .env
 .env.local

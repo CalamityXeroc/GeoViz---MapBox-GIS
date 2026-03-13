@@ -13,7 +13,7 @@ MapBox-Visualization/
 │   └── views/
 │       └── Maps.vue                # 地图编辑器核心组件（2138 行）
 │
-├── backend/                        # Node.js 后端（天地图代理服务）
+├── backend/                        # Node.js 后端
 │   ├── src/
 │   │   ├── server.js               # Express 服务器配置
 │   │   ├── config/
@@ -90,9 +90,7 @@ MapBox-Visualization/
   - 响应式设计
 
 #### 主要脚本功能
-- `getLayerVisibility()` - 获取图层可见性
-- `toggleLayer()` - 切换图层显示
-- `switchBaseMap()` - 切换底图类型
+- `switchBaseMap()` - 切换底图类型（矢量自建样式 / 卫星）
 - `setDrawMode()` - 设置绘制模式
 - `exportGeoJSON()` / `exportKML()` / `exportCSV()` - 数据导出
 - `handleFileImport()` - 文件导入
@@ -101,16 +99,14 @@ MapBox-Visualization/
 ### 后端模块
 
 #### Express 服务器（server.js）
-- 天地图瓦片代理（解决跨域）
 - 路由配置
 - 静态文件服务
 - CORS 处理
 
 #### 路由
-- `/api/tdt/*` - 天地图瓦片代理
-- `/blog` - 博客相关
-- `/comments` - 评论相关
-- `/upload` - 文件上传
+- `/api/blog` - 博客相关
+- `/api/comments` - 评论相关
+- `/api/upload` - 文件上传
 
 ### 数据文件
 
@@ -169,7 +165,11 @@ MapBox GL 操作
 ```env
 PORT=3001
 NODE_ENV=development
-TDT_TOKEN=your_tdt_token
+```
+
+### .env.local（前端）
+```env
+VITE_MAPBOX_TOKEN=your_mapbox_access_token
 ```
 
 ## 构建和部署

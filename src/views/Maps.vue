@@ -72,58 +72,6 @@
             </label>
           </div>
 
-          <!-- 图层开关 -->
-          <div class="layer-item">
-            <label class="layer-control">
-              <input 
-                type="checkbox" 
-                :checked="getLayerVisibility('tdt-vec-layer')"
-                @change="toggleLayer('tdt-vec-layer')"
-              />
-              <span>基础地图</span>
-            </label>
-          </div>
-          
-          <div class="layer-item">
-            <label class="layer-control">
-              <input 
-                type="checkbox" 
-                :checked="getLayerVisibility('tdt-cva-layer')"
-                @change="toggleLayer('tdt-cva-layer')"
-              />
-              <span>地名注记</span>
-            </label>
-          </div>
-          
-          <div class="layer-item">
-            <label class="layer-control">
-              <input 
-                type="checkbox" 
-                :checked="getLayerVisibility('china-forest-fill')"
-                @change="toggleLayer('china-forest-fill')"
-              />
-              <span>森林数据</span>
-            </label>
-          </div>
-
-          <!-- 透明度控制 -->
-          <div class="layer-item">
-            <label class="slider-control">
-              <span>森林数据透明度</span>
-              <div class="slider-wrapper">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  v-model="layerOpacity" 
-                  @input="updateLayerOpacity"
-                  class="opacity-slider"
-                />
-                <span class="opacity-value">{{ layerOpacity }}%</span>
-              </div>
-            </label>
-          </div>
-
           <!-- 分割线 -->
           <div class="divider"></div>
 
@@ -326,26 +274,6 @@
         </div>
       </div>
       
-      <!-- 图例组件 -->
-      <div class="map-legend" v-show="!loading">
-        <h4>中国森林覆盖率</h4>
-        <div class="legend-scale">
-          <span style="background: #f7fcf5"></span>
-          <span style="background: #e5f5e0"></span>
-          <span style="background: #c7e9c0"></span>
-          <span style="background: #a1d99b"></span>
-          <span style="background: #74c476"></span>
-          <span style="background: #41ab5d"></span>
-          <span style="background: #238b45"></span>
-          <span style="background: #005a32"></span>
-        </div>
-        <div class="legend-labels">
-          <span>0%</span>
-          <span style="margin-left: auto">70%+</span>
-        </div>
-        <p class="legend-source">点击省份查看详情</p>
-      </div>
-
       <div id="map" class="map-container"></div>
     </div>
   </div>
@@ -361,6 +289,10 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 export default {
   name: 'Maps',
   setup() {
+    const MAPBOX_VECTOR_STYLE = 'mapbox://styles/xeroc/cmknj1u67000901ra8gc956tv';
+    const MAPBOX_SATELLITE_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12';
+    const DEFAULT_MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
+
     let map = null;
     let draw = null; // 新增：MapboxDraw 实例
     const loading = ref(true);
@@ -373,7 +305,6 @@ export default {
     const isDragging = ref(false);
     const dragStart = ref({ x: 0, y: 0 });
     const currentBaseMap = ref('vec');
-    const layerOpacity = ref(80);
     const isMobile = ref(false); // 是否手机端
     
     // 绘制工具状态
@@ -452,77 +383,26 @@ export default {
       }
     };
 
-    // 获取图层可见性
-    const getLayerVisibility = (layerId) => {
-      if (!map || !map.getLayer(layerId)) {
-        // 如果图层还未加载，返回 true（默认可见）
-        return true;
-      }
-      const visibility = map.getLayoutProperty(layerId, 'visibility');
-      // 默认情况下，如果没有设置 visibility，视为 'visible'
-      return visibility !== 'none';
-    };
-
-    // 切换图层显示/隐藏
-    const toggleLayer = (layerId) => {
-      if (!map || !map.getLayer(layerId)) return;
-      
-      const visibility = map.getLayoutProperty(layerId, 'visibility');
-      // 修复逻辑：如果是 'none' 则变为 'visible'，否则变为 'none'
-      const newVisibility = visibility === 'none' ? 'visible' : 'none';
-      map.setLayoutProperty(layerId, 'visibility', newVisibility);
-    };
-
-    // 更新图层透明度
-    const updateLayerOpacity = () => {
-      if (!map || !map.getLayer('china-forest-fill')) return;
-      const opacity = layerOpacity.value / 100;
-      map.setPaintProperty('china-forest-fill', 'fill-opacity', opacity * 0.8); // 保持基础透明度0.8
-    };
-
     // 底图切换
     const switchBaseMap = (type) => {
-      if (!map || !map.getSource('tdt-vec')) return;
+      if (!map) return;
       
       currentBaseMap.value = type;
-      const vectorSource = map.getSource('tdt-vec');
-      const tiledSource = map.getSource('tdt-cva');
-      
-      if (type === 'vec') {
-        // 矢量图
-        vectorSource.setTiles([
-          '/api/tdt/vec_w/{z}/{x}/{y}'
-        ]);
-        tiledSource.setTiles([
-          '/api/tdt/cva_w/{z}/{x}/{y}'
-        ]);
-      } else if (type === 'img') {
-        // 卫星图 - 通过后端代理避免跨域问题
-        vectorSource.setTiles([
-          '/api/tdt/img_w/{z}/{x}/{y}'
-        ]);
-        tiledSource.setTiles([
-          '/api/tdt/cia_w/{z}/{x}/{y}'
-        ]);
-      }
+
+      const nextStyle = type === 'img' ? MAPBOX_SATELLITE_STYLE : MAPBOX_VECTOR_STYLE;
+      map.setStyle(nextStyle);
     };
 
     // 重置地图到初始位置和状态
     const resetMap = () => {
       if (!map) return;
       map.flyTo({
-        center: [105, 36],
-        zoom: 3.5,
-        pitch: 0,
+        center: [116.3908, 39.9158],
+        zoom: 1,
+        pitch: 45,
         bearing: 0,
         duration: 1000
       });
-      layerOpacity.value = 80;
-      
-      map.setLayoutProperty('tdt-vec-layer', 'visibility', 'visible');
-      map.setLayoutProperty('tdt-cva-layer', 'visibility', 'visible');
-      map.setLayoutProperty('china-forest-fill', 'visibility', 'visible');
-      map.setPaintProperty('china-forest-fill', 'fill-opacity', 0.8);
     };
 
     // 设置绘制模式（驱动 MapboxDraw）
@@ -706,7 +586,7 @@ export default {
         alert(`已导出 ${format.toUpperCase()} 格式的地图`);
       } catch (e) {
         console.error('导出图片失败', e);
-        alert('导出图片失败，可能是因为瓦片跨域。请确保后端代理已配置 CORS 响应头 Access-Control-Allow-Origin: *');
+        alert('导出图片失败，请检查当前 Mapbox token 与样式权限设置。');
       }
     };
 
@@ -1030,10 +910,10 @@ export default {
       setupMouseListeners();
       
       try {
-        console.log('开始初始化天地图...');
+        console.log('开始初始化 Mapbox 底图...');
         
         // 从环境变量获取 Mapbox Token
-        mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
+        mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || DEFAULT_MAPBOX_TOKEN;
         
         // 禁用遥测，消除 events.mapbox.com 报错
         try {
@@ -1044,142 +924,23 @@ export default {
 
         map = new mapboxgl.Map({
           container: 'map',
-          style: {
-            version: 8,
-            sources: {
-              'tdt-vec': {
-                type: 'raster',
-                tiles: [
-                  // 使用相对路径，由 Vite 代理转发，解决手机端访问 localhost 失败的问题
-                  '/api/tdt/vec_w/{z}/{x}/{y}'
-                ],
-                tileSize: 256
-              },
-              'tdt-cva': {
-                type: 'raster',
-                tiles: [
-                  '/api/tdt/cva_w/{z}/{x}/{y}'
-                ],
-                tileSize: 256
-              }
-            },
-            layers: [
-              {
-                id: 'tdt-vec-layer',
-                type: 'raster',
-                source: 'tdt-vec',
-                minzoom: 0,
-                maxzoom: 18,
-                paint: { 'raster-opacity': 1 }
-              }
-            ]
-          },
-          center: [105, 36],
-          zoom: 3.5,
+          style: MAPBOX_VECTOR_STYLE,
+          center: [116.3908, 39.9158],
+          zoom: 17.5,
           minZoom: 3,
           maxZoom: 18,
-          pitch: 0, // 初始倾斜角度
+          pitch: 45,
           bearing: 0,
           preserveDrawingBuffer: true // 启用绘制缓冲以支持截图
         });
 
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-        map.on('load', async () => {
-          console.log('天地图加载完成');
+        map.on('load', () => {
+          console.log('Mapbox 底图加载完成');
           // 注意：不要在这里直接置为 false，而是在数据处理完成后（finally块中）
           
           try {
-            const [geoRes, csvRes] = await Promise.all([
-              fetch('/geoData/中国_省.geojson'),
-              fetch('/geoData/全国各省森林覆盖率2022.csv')
-            ]);
-
-
-            if (!geoRes.ok) throw new Error(`GeoJSON加载失败: ${geoRes.status}`);
-            if (!csvRes.ok) throw new Error(`CSV加载失败: ${csvRes.status}`);
-
-            const geoData = await geoRes.json();
-            const csvText = await csvRes.text();
-
-            const forestDataMap = {};
-            const rows = csvText.split('\n');
-            rows.forEach((row, index) => {
-              if (index === 0 || !row.trim()) return; 
-              const cols = row.split(',');
-              if (cols.length >= 3) {
-                const provinceName = cols[1].trim();
-                const rate = parseFloat(cols[2].trim());
-                forestDataMap[provinceName] = rate;
-              }
-            });
-
-            geoData.features.forEach(feature => {
-              const name = feature.properties.name;
-              let rate = forestDataMap[name];
-              if (rate === undefined) {
-                 const key = Object.keys(forestDataMap).find(k => k.includes(name) || name.includes(k));
-                 if (key) rate = forestDataMap[key];
-              }
-              // 平面展示不需要 height
-              feature.properties.forestRate = rate || 0;
-            });
-
-            map.addSource('china-provinces', {
-              type: 'geojson',
-              data: geoData
-            });
-
-            // 1. 平面分级设色层 (Fill)
-            map.addLayer({
-              id: 'china-forest-fill',
-              type: 'fill',
-              source: 'china-provinces',
-              paint: {
-                'fill-color': [
-                  'interpolate',
-                  ['linear'],
-                  ['get', 'forestRate'],
-                  0, '#f7fcf5',
-                  10, '#e5f5e0',
-                  20, '#c7e9c0',
-                  30, '#a1d99b',
-                  40, '#74c476',
-                  50, '#41ab5d',
-                  60, '#238b45',
-                  70, '#005a32'
-                ],
-                'fill-opacity': 0.8,
-                'fill-outline-color': '#00441b' // 添加边界线
-              }
-            });
-
-            // 2. 高亮轮廓层 (点击选中时显示)
-            map.addLayer({
-              id: 'china-forest-highlight',
-              type: 'line',
-              source: 'china-provinces',
-              paint: {
-                'line-color': '#fbb03b',
-                'line-width': 3,
-                'line-opacity': [
-                  'case',
-                  ['boolean', ['feature-state', 'hover'], false],
-                  1,
-                  0
-                ]
-              }
-            });
-
-            // 3. 将注记层放在最上面，保证文字不被遮挡
-            map.addLayer({
-              id: 'tdt-cva-layer',
-              type: 'raster',
-              source: 'tdt-cva',
-              minzoom: 0,
-              maxzoom: 18
-            });
-
             // ============ 初始化 MapboxDraw with 自定义样式 ============
             draw = new MapboxDraw({
               displayControlsDefault: false,
@@ -1373,84 +1134,6 @@ export default {
             };
             window.addEventListener('keydown', window.handleKeyDown);
 
-            // --- 交互逻辑 ---
-
-            const popup = new mapboxgl.Popup({
-              closeButton: false,
-              closeOnClick: false,
-              offset: 25
-            });
-
-            let hoveredStateId = null;
-
-            // 鼠标移动交互
-            map.on('mousemove', 'china-forest-fill', (e) => {
-              // 防护：绘制模式下禁用此交互
-              if (isDrawingMode()) {
-                map.getCanvas().style.cursor = 'crosshair';
-                return;
-              }
-
-              if (e.features.length > 0) {
-                map.getCanvas().style.cursor = 'pointer';
-                const feature = e.features[0];
-                
-                const props = feature.properties;
-                
-                popup.setLngLat(e.lngLat)
-                  .setHTML(`
-                    <div style="font-family: 'PingFang SC', sans-serif; padding: 8px; min-width: 120px;">
-                      <h3 style="margin:0 0 8px 0; font-size:16px; color:#333; border-bottom:2px solid #41ab5d; padding-bottom:4px;">${props.name}</h3>
-                      <div style="font-size:14px; color:#666;">
-                        森林覆盖率: <b style="color:#238b45; font-size:18px;">${props.forestRate}%</b>
-                      </div>
-                    </div>
-                  `)
-                  .addTo(map);
-              }
-            });
-
-            map.on('mouseleave', 'china-forest-fill', () => {
-              // 防护：绘制模式下禁用此交互
-              if (isDrawingMode()) return;
-
-              map.getCanvas().style.cursor = '';
-              popup.remove();
-            });
-
-            // 点击飞入交互 (FlyTo)
-            map.on('click', 'china-forest-fill', (e) => {
-              // 防护：绘制模式下禁用
-              if (isDrawingMode()) return;
-
-              const feature = e.features[0];
-              
-              // 简单的飞入效果
-              map.flyTo({
-                center: e.lngLat,
-                zoom: 6,
-                speed: 0.8,
-                curve: 1,
-                essential: true
-              });
-            });
-
-            // 点击空白处复位
-            map.on('click', (e) => {
-              // 防护：绘制模式下禁用
-              if (isDrawingMode()) return;
-
-              const features = map.queryRenderedFeatures(e.point, { layers: ['china-forest-fill'] });
-              if (!features.length) {
-                map.flyTo({
-                  center: [105, 36],
-                  zoom: 3.5,
-                  pitch: 0,
-                  bearing: 0
-                });
-              }
-            });
-
           } catch (err) {
             console.error('加载并处理数据失败:', err);
           } finally {
@@ -1489,7 +1172,6 @@ export default {
       error,
       isToolboxOpen,
       toolboxCollapsed,
-      layerOpacity,
       toolboxPos,
       currentBaseMap,
       currentDrawMode,
@@ -1499,12 +1181,9 @@ export default {
       lineStyle,
       polygonStyle,
       isMobile,
-      toggleLayer,
-      updateLayerOpacity,
       resetMap,
       toggleToolbox,
       switchBaseMap,
-      getLayerVisibility,
       startDrag,
       setDrawMode,
       deleteSelected,
@@ -1614,62 +1293,6 @@ export default {
 
 .error-message {
   color: #f56c6c;
-}
-
-/* Legend Styles */
-.map-legend {
-  position: absolute;
-  bottom: 30px;
-  right: 30px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  font-family: "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  z-index: 100;
-  min-width: 250px;
-  backdrop-filter: blur(5px);
-}
-
-.map-legend h4 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: #333;
-  font-weight: 600;
-}
-
-.legend-scale {
-  display: flex;
-  width: 100%;
-  height: 12px;
-  margin-bottom: 5px;
-  border-radius: 2px;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
-.legend-scale span {
-  flex: 1;
-  height: 100%;
-}
-
-.legend-labels {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.legend-source {
-  margin: 0;
-  font-size: 12px;
-  color: #888;
-  text-align: left;
-  border-top: 1px solid #eee;
-  padding-top: 8px;
-  line-height: 1.5;
 }
 
 .mapboxgl-ctrl-top-right {
@@ -2203,10 +1826,6 @@ export default {
 
   .toolbox.mobile .toolbox-content::-webkit-scrollbar-thumb:hover {
     background: #999;
-  }
-
-  .map-legend {
-    display: none;
   }
 
   .map-header {

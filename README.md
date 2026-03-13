@@ -8,20 +8,19 @@
 
 ## ✨ 功能特性
 
-- 🗺️ **智能底图** - 支持矢量图/卫星图/多源底图切换
+- 🗺️ **智能底图** - 支持矢量自建样式/卫星底图切换（Mapbox）
 - 🎨 **专业绘制工具** - 点、线、面绘制和高级样式定制
-- 📊 **地理数据可视化** - 中国森林覆盖率、行政区划等多层数据展示
 - 📥 **灵活的数据处理** - 支持 GeoJSON、KML、CSV、PNG/JPEG 格式的导入导出
-- 🎯 **丰富的交互功能** - 地图缩放、飞入、省份数据查询、悬停预览
+- 🎯 **丰富的交互功能** - 地图缩放、飞入、绘制要素查询
 - 📱 **完美的响应式设计** - 无缝支持桌面、平板和移动设备
 
 ## 技术栈
 
 - **前端**: Vue 3 + Vite
 - **地图**: MapBox GL、MapBox GL Draw
-- **底图源**: 天地图（TDT）
+- **底图源**: Mapbox 自建样式 + Mapbox 卫星样式
 - **构建**: Vite 2.x
-- **后端**: Node.js/Express（代理天地图瓦片）
+- **后端**: Node.js/Express
 
 ## 快速开始
 
@@ -67,20 +66,7 @@ npm run build
 可以直接访问在线版本体验完整功能，包括：
 - 实时地图编辑
 - 数据导入导出
-- 森林覆盖率数据可视化
-- 多底图切换
-
-### 应用界面
-
-<div align="center">
-
-**中国地理数据可视化 - 森林覆盖率展示**
-
-![GeoViz Map Editor - Forest Coverage Rate](https://raw.githubusercontent.com/your-repo/gis-viz-editor/main/screenshots/china-forest-coverage.png)
-
-*支持底图切换、图层显示/隐藏、数据查询、导入导出等功能*
-
-</div>
+- 多底图切换（自建矢量样式 / 卫星）
 
 ## 项目结构
 
@@ -121,7 +107,6 @@ public/
 ```env
 # 必需
 PORT=3001
-TDT_KEY=your_tdt_token_here
 
 # 可选（如使用数据库）
 DB_HOST=localhost
@@ -134,6 +119,17 @@ DB_PASSWORD=123456
 NODE_ENV=development
 UPLOAD_PATH=./uploads
 ```
+
+### 前端环境配置
+在项目根目录 `.env.local` 中配置：
+
+```env
+VITE_MAPBOX_TOKEN=your_mapbox_access_token
+```
+
+当前默认示例样式：
+- 矢量底图：`mapbox://styles/xeroc/cmknj1u67000901ra8gc956tv`
+- 卫星底图：`mapbox://styles/mapbox/satellite-streets-v12`
 
 ## 使用指南
 
@@ -153,16 +149,14 @@ UPLOAD_PATH=./uploads
 - **导出**: 支持导出为 GeoJSON、KML、CSV、PNG/JPEG 等格式
 - **保存**: 数据自动保存到浏览器 LocalStorage
 
-### 数据查询
-- 悬停鼠标显示省份信息和森林覆盖率
-- 调整左侧透明度滑块改变数据层可见度
-- 点击"重置地图"恢复初始视图
+### 地图操作
+- 点击"重置地图"恢复默认视角（北京城区）
 
 ## 外部数据源
 
 - **阿里云区域选择器**: 快速选择行政区域
 - **POI86**: 获取高德 POI 数据
-- **天地图 (TDT)**: 中国官方地理底图数据
+- **Mapbox Studio**: 自定义地图样式管理
 
 ## 许可证
 
